@@ -1,6 +1,6 @@
-.PHONY: check-style clean pre-run test install flow
+.PHONY: check-style clean pre-run test install update-dependencies
 
-.npminstall: package.json
+node_modules: package.json
 	@if ! [ $(shell which npm) ]; then \
 		echo "npm is not installed"; \
 		exit 1; \
@@ -10,49 +10,34 @@
 
 	npm install --ignore-scripts
 
-	touch $@
-
-check-style: | pre-run .npminstall
+check-style: | pre-run node_modules
 	@echo Checking for style guide compliance
 
 	npm run check
 
-clean:
+clean: pre-run
 	@echo Cleaning app
 
-	rm -rf node_modules
-	rm -f .npminstall
+	rm -rf node_modules 
 
 pre-run:
 	@echo Make sure no previous build are in the folder
 
-	@rm -rf actions
-	@rm -rf action_types
-	@rm -rf client
-	@rm -rf constants
-	@rm -rf reducers
-	@rm -rf selectors
-	@rm -rf store
-	@rm -rf utils
-	@rm -rf lib
+	@rm -rf build/* action_types actions client constants reducers selectors store utils types mattermost.client4* index.* mattermost.websocket_client*
 
-test: check-style flow
+test: check-style
 	npm test
 
-flow: .flowinstall
-	@echo Checking types
+check-types: | pre-run node_modules
+	npm run tsc
 
-	npm run flow
+install: node_modules
 
-.flowinstall: .npminstall
-	@echo Getting flow-typed packages
-
-	npm run flow-typed install
-
-	touch $@
-
-install: .npminstall
-
-bundle:
+bundle: | pre-run node_modules
 	npm run build
-	npm run webpack
+
+update-dependencies: # Updates the dependencies
+	npm update --depth 9999
+	npm audit fix
+	@echo Automatic dependency update complete.
+	@echo You should manually inspect changes to package.json and pin exact versions of packages where appropriate.
